@@ -1,5 +1,6 @@
 #include "config.c"
 #include "server.h"
+#include "utils.h"
 
 #include <bits/pthreadtypes.h>
 #include <errno.h>
@@ -25,10 +26,12 @@ void handle_chat(struct event_data *event_data)
 
 void* handle_routine(void *data_join)
 {
-    printf("recv data after subthread %p\n", &data_join);
+    dprint("recv data after subthread %p\n", &data_join);
     struct data_join *detached_data = data_join;
     int server_by = detached_data->event_data.serve_by;
-    printf("pesan: %s\n", detached_data->event_data.text);
+    logp("pesan: %s", detached_data->event_data.text);
+
+    handle_chat(struct event_data *event_data)
     // carrier_now = (struct carrier*)carrier;
     // printf("breakpoint anyar %d\n", 999);
     // printf("breakpoint serv by %d\n", carrier_now->event_data->serve_by);
@@ -37,7 +40,8 @@ void* handle_routine(void *data_join)
 
     // // release the state
     // carrier_now->event_stack[carrier_now->event_data->serve_by]->state = 0;
-    printf("served by num %d\n", detached_data->event_data.serve_by);
+    //printf("served by num %d\n", detached_data->event_data.serve_by);
+    
     sleep(5);
     detached_data->event_stack[server_by].state = 0;
 
@@ -79,21 +83,22 @@ int random_thread_create(struct event_stack* event_stack, struct event_data even
         if (event_stack[a].state == 0) {
             event_data.serve_by = a;
             event_stack[a].state = 1;
-            printf("befoore thread served by %d\n", event_data.serve_by);
+            dprint("befoore thread served by %d\n", event_data.serve_by);
 
             data_join.event_data  = event_data;
             data_join.event_stack = event_stack;
 
             // printf("datajoin memaddr di subthread %p\n", data_join);
 
-            // printf("threads serve by %d status %d text %s\n", event_data.serve_by, event_stack[a].state, event_data.text);
-
+            dprint("threads serve by %d status %d text %s\n", event_data.serve_by, event_stack[a].state, event_data.text);
+            
             pthread_create(&event_stack[a].thread, 
                 NULL, handle_routine, 
                 (void*)&data_join); // copy data 
-            break;
-        }
+            return 0;
+        } 
     }
+    return -1;
     //         
 
             
@@ -169,24 +174,16 @@ void *handle_incoming_conn(void *ptr)
 
         
 
-        //printf("eventstack addr current %p\n", &event_stack);
+        // printf("value \"%d\" \"%s\" \n", strcmp(buf, "gau"), buf);
+        // return 0;
         
-        
-        
-        random_thread_create(event_stack, event_data);
-        
-        
-
-        
-
-        
-
-        
-
-
-
-
-        
+        if (strcmp(buf, "") != 0) {
+            if (random_thread_create(event_stack, event_data) == -1) {
+                printf("[WARNING] waiting conn\n");
+            }
+        } else {
+            //printf("text null\n");
+        }
     }
 }
 
@@ -201,7 +198,7 @@ int create_udp_server()
     pthread_t handle_conn_thread;
 
     
-    udp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    udp_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (udp_fd == -1) {
         err = errno;
         perror("socket udp err fd");
@@ -214,11 +211,11 @@ int create_udp_server()
     memset(&sockaddr_in, 0, sizeof(sockaddr_in));
 
     sockaddr_in.sin_family = AF_INET;
-    sockaddr_in.sin_port = htons(9000);
+    sockaddr_in.sin_port = htons(7000);
     sockaddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
     
     ret = bind(udp_fd, (const struct sockaddr*) &sockaddr_in, sizeof(sockaddr_in));
-    printf("ret %d\n", errno);
+    dprint("ret %d\n", errno);
     
     pthread_create(&handle_conn_thread, NULL, handle_incoming_conn, (void*)&udp_fd);
 
