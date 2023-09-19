@@ -4,6 +4,7 @@
 
 #include <bits/pthreadtypes.h>
 #include <errno.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -31,7 +32,7 @@ void* handle_routine(void *data_join)
     int server_by = detached_data->event_data.serve_by;
     logp("pesan: %s", detached_data->event_data.text);
 
-    handle_chat(struct event_data *event_data)
+    //handle_chat(struct event_data *event_data);
     // carrier_now = (struct carrier*)carrier;
     // printf("breakpoint anyar %d\n", 999);
     // printf("breakpoint serv by %d\n", carrier_now->event_data->serve_by);
@@ -130,11 +131,16 @@ void signal_handler(int signal_recv_number)
     emergency_exit = 1;
 }
 
-void do_eventloop(int *udp_fd, pthread_t *handle_conn_thread)
+void do_eventloop(struct garbage_descriptor *garbage_descriptor, pthread_t *handle_conn_thread)
 {
     while(1){
+        sleep(1);
+        
+        printf("udpfd memaddr afterpass %p\n", garbage_descriptor->udpfd);
+        // checking
         if (emergency_exit == 1) {
-            close(*udp_fd);
+            close(*garbage_descriptor->udpfd);
+            close(*garbage_descriptor->epfd);
             pthread_cancel(*handle_conn_thread);
             printf("exit succesfully\n");
             break;
@@ -147,11 +153,22 @@ void do_eventloop(int *udp_fd, pthread_t *handle_conn_thread)
 void *handle_incoming_conn(void *ptr)
 {
     
-    int *udp_fd = (int*)ptr;
+    int epoll_offset, i;
+    struct garbage_descriptor *garbage_descriptor = ptr;
+    struct epoll_event *events;
+
+    printf("efpd memaddr after %d\n", *garbage_descriptor->epfd);
+
+    int udp_fd = *garbage_descriptor->udpfd;
+    int epfd  = *garbage_descriptor->epfd;
+    events = garbage_descriptor->events;
+
+
     char buf[4096];
     struct sockaddr_in clientAddress;
     struct event_data event_data;
     struct event_stack event_stack[10];
+
 
     for(int i = 0; i < MAX_CHILD; i++) {
         event_stack[i].state = 0;
@@ -159,32 +176,60 @@ void *handle_incoming_conn(void *ptr)
 
    // printf("eventstack mainmemaddr %p\n", &event_stack);
 
-    socklen_t socklen = sizeof(clientAddress);
-    while (1)
-    {
-        
-        memset(&buf, 0, sizeof(buf));
-        memset(&event_data, 0, sizeof(event_data));
-        recvfrom(*udp_fd, &buf, sizeof(buf), 0, (struct sockaddr *)&clientAddress, (socklen_t *)sizeof(clientAddress));
-        // printf("udp recvbuf: %s", buf);
+   // start here
 
-        event_data.time = (int)time(NULL);
-        strcpy(event_data.text, buf);
-        event_data.ip = clientAddress.sin_addr;
+   while (1)
+   {
+        printf("waiting \n");
+        epoll_offset = epoll_wait(epfd, events, EPOLL_MAX_EVENTS, -1);
 
-        
+        for (i = 0; i < epoll_offset; i++) {
+            if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || !(events[i].events & EPOLLIN)) {
+                perror("epoll error");
+                close(events[i].data.fd);
+                continue;
+            } else {
+                memset(&buf, 0, sizeof(buf));
+                memset(&event_data, 0, sizeof(event_data));
+                recvfrom(events[i].data.fd, &buf, sizeof(buf), 0, 
+                    (struct sockaddr *)&clientAddress, (socklen_t *)sizeof(clientAddress));
 
-        // printf("value \"%d\" \"%s\" \n", strcmp(buf, "gau"), buf);
-        // return 0;
-        
-        if (strcmp(buf, "") != 0) {
-            if (random_thread_create(event_stack, event_data) == -1) {
-                printf("[WARNING] waiting conn\n");
+                // event_data.time = (int)time(NULL);
+                // strcpy(event_data.text, buf);
+                // event_data.ip = clientAddress.sin_addr;
+                printf("value \"%d\" \"%s\" \n", strcmp(buf, "gau"), buf);
+                printf("revc data %s\n", buf);
             }
-        } else {
-            //printf("text null\n");
         }
-    }
+   }
+
+    // socklen_t socklen = sizeof(clientAddress);
+    // while (1)
+    // {
+    //     epoll_offset = epoll_wait(*epfd, events, EPOLL_MAX_EVENTS, 0);
+        
+    //     memset(&buf, 0, sizeof(buf));
+    //     memset(&event_data, 0, sizeof(event_data));
+    //     recvfrom(*udp_fd, &buf, sizeof(buf), 0, (struct sockaddr *)&clientAddress, (socklen_t *)sizeof(clientAddress));
+    //     // printf("udp recvbuf: %s", buf);
+
+    //     event_data.time = (int)time(NULL);
+    //     strcpy(event_data.text, buf);
+    //     event_data.ip = clientAddress.sin_addr;
+
+        
+
+    //     // printf("value \"%d\" \"%s\" \n", strcmp(buf, "gau"), buf);
+    //     // return 0;
+        
+    //     if (strcmp(buf, "") != 0) {
+    //         if (random_thread_create(event_stack, event_data) == -1) {
+    //             printf("[WARNING] waiting conn\n");
+    //         }
+    //     } else {
+    //         //printf("text null\n");
+    //     }
+    // }
 }
 
 int create_udp_server() 
@@ -193,16 +238,33 @@ int create_udp_server()
 
     
     struct sockaddr_in sockaddr_in;
-    int udp_fd, err, ret;
-
+    struct garbage_descriptor garbage_descriptor;
+    int udp_fd, err, ret, epfd;
     pthread_t handle_conn_thread;
+    struct epoll_event event, events[EPOLL_MAX_EVENTS];
 
-    
+    epfd = epoll_create1(0);
+    if (epfd == -1) {
+        perror("epoll fd err");
+        return errno;
+    }
+
+    // set to be nonblock
     udp_fd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
     if (udp_fd == -1) {
         err = errno;
         perror("socket udp err fd");
         return err;
+    }
+
+    event.events = EPOLLIN;
+    event.data.fd = udp_fd;
+
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, udp_fd, &event) == -1) {
+        perror("epoll ctl add error");
+        close(udp_fd);
+        close(epfd);
+        return errno;
     }
 
     // printf("ret %d\n", errno);
@@ -217,12 +279,19 @@ int create_udp_server()
     ret = bind(udp_fd, (const struct sockaddr*) &sockaddr_in, sizeof(sockaddr_in));
     dprint("ret %d\n", errno);
     
-    pthread_create(&handle_conn_thread, NULL, handle_incoming_conn, (void*)&udp_fd);
+    
 
+    // set all garbage to be cleaned
+    garbage_descriptor.udpfd = &udp_fd;
+    garbage_descriptor.epfd = &epfd;
+    garbage_descriptor.events = events;
 
-   
+    pthread_create(&handle_conn_thread, NULL, handle_incoming_conn, (void*)&garbage_descriptor);
 
-    do_eventloop(&udp_fd, &handle_conn_thread);
+    printf("epfd memaddr %d\n", epfd);
+    printf("epfd memaddr struct %p\n", &garbage_descriptor.epfd);
+
+    do_eventloop(&garbage_descriptor, &handle_conn_thread);
     return 0;
 
 }

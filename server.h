@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <netinet/in.h>
 #include <stdint.h>
+#include <sys/epoll.h>
 
 struct event_data {
     int64_t time;
@@ -24,8 +25,16 @@ struct data_join
     struct event_data event_data;
 };
 
+struct garbage_descriptor
+{
+    int *udpfd;
+    int *epfd;
+    int *pthreadfd;
+    struct epoll_event *event, *events;
+};
+
 void signal_handler(int signal_recv_number);
-void do_eventloop(int *udpfd, pthread_t *handle_conn_thread);
+void do_eventloop(struct garbage_descriptor *garbage_descriptor, pthread_t *handle_conn_thread);
 void *handle_incoming_conn(void *ptr);
 int create_udp_server();
 
