@@ -4,7 +4,7 @@ PROJECT(server)
 
 SET(source
     server.c
-    server.h
+    utils.c
 )
 
 
