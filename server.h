@@ -11,6 +11,9 @@ struct event_data {
     char text[4096];
     struct in_addr ip;
     int serve_by;// whats thread number
+    int *fd; // fd to communicate
+    struct sockaddr_in clientdata;
+
 };
 
 struct event_stack
