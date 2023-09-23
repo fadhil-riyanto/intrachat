@@ -107,7 +107,7 @@ int random_thread_create(struct event_stack* event_stack, struct event_from_main
 
             // printf("datajoin memaddr di subthread %p\n", data_join);
 
-            dprint("threads serve by %d status %d text %s\n", event_data.serve_by, event_stack[a].state, event_data.text);
+            dprint("threads serve by %d andstatus %d text %s\n", event_data.serve_by, event_stack[a].state, event_data.text);
             
             pthread_create(&event_stack[a].thread, 
                 NULL, handle_routine, 
@@ -212,7 +212,7 @@ void *handle_incoming_conn(void *ptr)
                 strcpy(event_data.text, buf);
                 // event_data.ip = clientAddress.sin_addr;
                 // printf("value \"%d\" \"%s\" \n", strcmp(buf, "gau"), buf);
-                printf("revc data %s\n", buf);
+                dprint("revc data %s\n", buf);
                 
 
                 event_data.fd = &events[i].data.fd;
