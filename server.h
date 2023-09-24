@@ -13,7 +13,7 @@ struct event_from_main_thread_data {
     char text[4096];
     struct in_addr ip;
     int serve_by;// whats thread number
-    void *fd; // fd to communicate
+    int fd; // fd to communicate
     struct sockaddr_in clientdata;
 
 };
@@ -22,6 +22,8 @@ struct event_stack
 {
     pthread_t thread;
     int state;
+    int ready_to_use;
+    int reuse;
 };
 
 struct data_join
@@ -36,6 +38,7 @@ struct garbage_descriptor
     int *epfd;
     int *pthreadfd;
     struct epoll_event *event, *events;
+    struct event_stack *event_stack;
 };
 
 void signal_handler(int signal_recv_number);

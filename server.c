@@ -18,15 +18,32 @@
 #include <pthread.h>
 #include <time.h>
 
+int volatile emergency_exit = 0;
+int volatile highest_pthread_reached = 0;
+
 void pthread_stack_state_reset(struct event_stack *event_stack)
 {
     for(int i = 0; i < MAX_CHILD; i++) {
         event_stack[i].state = 0;
+        event_stack[i].ready_to_use = 1;
     }
 }
 
+void thread_joiner(struct event_stack *event_stack)
+{
 
-int volatile emergency_exit = 0;
+    for(int i = 0; i <= highest_pthread_reached; i++) {
+
+        // to do next: check 10 thread state, cancel 10 thread
+        if (event_stack[i].state == 0 && event_stack[i].ready_to_use == 0) {
+            printf("cleaning thread %d\n", i);
+            pthread_join(event_stack[i].thread, NULL);
+            event_stack[i].ready_to_use = 1;
+        }
+    }
+
+    
+}
 
 void handle_chat(struct event_from_main_thread_data *event_data)
 {
@@ -96,10 +113,12 @@ int random_thread_create(struct event_stack* event_stack, struct event_from_main
     //printf("showoff %d\n", data_join.event_stack[1]->state);
 
     for(int a = 0; a < MAX_CHILD; a++) {
+        
         //printf("loop ke %d\n", a);
-        if (event_stack[a].state == 0) {
+        if (event_stack[a].state == 0 && event_stack[a].ready_to_use == 1) {
             event_data.serve_by = a;
             event_stack[a].state = 1;
+            event_stack[a].ready_to_use = 0;
             dprint("befoore thread served by %d\n", event_data.serve_by);
 
             data_join.event_data  = event_data; // passed by reference
@@ -112,8 +131,15 @@ int random_thread_create(struct event_stack* event_stack, struct event_from_main
             pthread_create(&event_stack[a].thread, 
                 NULL, handle_routine, 
                 (void*)&data_join); // copy data 
+
+            if (a > highest_pthread_reached)
+            {
+                highest_pthread_reached = a;
+            }
             return 0;
         } 
+        
+        
     }
     return -1;
     //         
@@ -151,15 +177,36 @@ void do_eventloop(struct garbage_descriptor *garbage_descriptor, pthread_t *hand
 {
     while(1){
         sleep(1);
+        thread_joiner(garbage_descriptor->event_stack);
         
         printf("udpfd memaddr afterpass %p\n", garbage_descriptor->udpfd);
         // checking
         if (emergency_exit == 1) {
-            close(*garbage_descriptor->udpfd);
-            close(*garbage_descriptor->epfd);
-            //free(garbage_descriptor->events) ;
+            printf("higest reached %d\n", highest_pthread_reached);
+            
+            for(int i = 0; i <= highest_pthread_reached; i++) {
+
+                // to do next: check 10 thread state, cancel 10 thread
+                if (garbage_descriptor->event_stack[i].state == 1) {
+                    printf("killing running thread %d\n", i);
+                    pthread_cancel(garbage_descriptor->event_stack[i].thread);
+                }
+
+                if (garbage_descriptor->event_stack[i].ready_to_use == 0) {
+                    printf("clening the unclean thread %d\n", i);
+                    pthread_join(garbage_descriptor->event_stack[i].thread, NULL);
+                }
+                
+                
+                
+            }
+
             pthread_cancel(*handle_conn_thread);
             pthread_join(*handle_conn_thread, NULL);
+
+            close(*garbage_descriptor->udpfd);
+            close(*garbage_descriptor->epfd);
+
             printf("exit succesfully\n");
             break;
         }
@@ -178,7 +225,7 @@ void *handle_incoming_conn(void *ptr)
 
     struct garbage_descriptor *garbage_descriptor = ptr;
     struct epoll_event *events = garbage_descriptor->events;
-    struct event_stack event_stack[10];
+    struct event_stack *event_stack = garbage_descriptor->event_stack;
     struct event_from_main_thread_data event_data;
     struct sockaddr_in clientAddress;
     
@@ -215,15 +262,15 @@ void *handle_incoming_conn(void *ptr)
                 dprint("revc data %s\n", buf);
                 
 
-                event_data.fd = &events[i].data.fd;
+                event_data.fd = events[i].data.fd;
                 event_data.clientdata = clientAddress;
 
                 printf("memaddr %p \n", &clientAddress);
                 printf("memaddr then %p \n", &event_data.clientdata);
 
-                // if (random_thread_create(event_stack, event_data) == -1) {
-                //     printf("[WARNING] waiting conn\n");
-                // }
+                if (random_thread_create(event_stack, event_data) == -1) {
+                    printf("[WARNING] waiting conn\n");
+                }
             }
         }
    }
@@ -261,7 +308,6 @@ void *handle_incoming_conn(void *ptr)
 static int prepare_sockfd(int *udpfd_ptr, char *addr, int port, int is_nonblock)
 {
     int sock_type, err, ret;
-    int udpfd;
 
     struct sockaddr_in sockaddr_in;
 
@@ -281,8 +327,8 @@ static int prepare_sockfd(int *udpfd_ptr, char *addr, int port, int is_nonblock)
     memset(&sockaddr_in, 0, sizeof(sockaddr_in));
 
     sockaddr_in.sin_family = AF_INET;
-    sockaddr_in.sin_port = htons(7000);
-    sockaddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+    sockaddr_in.sin_port = htons(port);
+    sockaddr_in.sin_addr.s_addr = inet_addr(addr);
     
     ret = bind(*udpfd_ptr, (const struct sockaddr*) &sockaddr_in, sizeof(sockaddr_in));
     if (ret == -1) {
@@ -322,9 +368,9 @@ int create_udp_server()
     int ret;
     int epfd;
 
-    struct sockaddr_in sockaddr_in;
     struct garbage_descriptor garbage_descriptor;
     struct epoll_event event, events[EPOLL_MAX_EVENTS];
+    struct event_stack event_stack[10];
 
     pthread_t handle_conn_thread;
 
@@ -344,6 +390,7 @@ int create_udp_server()
     garbage_descriptor.udpfd = &udpfd;
     garbage_descriptor.epfd = &epfd;
     garbage_descriptor.events = events;
+    garbage_descriptor.event_stack = event_stack;
 
     pthread_create(&handle_conn_thread, NULL, handle_incoming_conn, (void*)&garbage_descriptor);
 
