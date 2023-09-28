@@ -5,16 +5,18 @@
 
 void* threadrn(void *pointer)
 {
-    printf("hello from thread\n");
+    int *a = *(int*)pointer;
+    printf("hello from thread %d\n", *a);
     return 0;
 }
 
 int main()
 {
     int ret;
+    int data = 999;
     printf("hello from main\n");
     pthread_t thread;
-    ret = pthread_create(&thread, NULL, threadrn, (void*)9);
+    ret = pthread_create(&thread, NULL, threadrn, (void*)777);
 
     printf("pthread ret %d\n", ret);
     sleep(1);
