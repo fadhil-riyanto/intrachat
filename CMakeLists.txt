@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.27.1)
-add_compile_options(-Wall -Wextra)
+add_compile_options(-Wall -Wextra -Wpedantic)
 
 
 PROJECT(server)
