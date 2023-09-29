@@ -22,7 +22,8 @@
 int volatile emergency_exit = 0;
 int volatile highest_pthread_reached = 0;
 
-void server_set_properties(int port, char* address, int is_nonblock, void *(*routine)(void*))
+void server_set_properties(int port, char* address, int is_nonblock, 
+    void *(*routine)(void*))
 {
 
 }
@@ -59,27 +60,41 @@ void handle_chat(struct event_from_main_thread_data *event_data)
 
 void* handle_routine(void *data_join)
 {
+    struct data_join *detached_data = data_join;
+    int serve_by = *detached_data->serve_by;
+    char text[MAXIMUM_BUFFER];
+    //strcpy(text, detached_data->event_data[serve_by].text);
+    sleep(5);
     // dprint("recv data after subthread %p\n", &data_join);
     // printf("nums\n");
     // printf("nums %d\n", *(int*)data_join);
-    struct data_join *detached_data = data_join;
-    int serve_by = *detached_data->serve_by;
-    printf("incoming messange %s\n", detached_data->event_data[serve_by].text);
+    
+    printf("incoming messange adalah %s\n", detached_data->event_data[serve_by].text);
     //int serve_by = detached_data->serve_by;
     // int server_by = detached_data->event_data.serve_by;
     
 
-    // detached_data->event_data.routine(NULL);
+    //detached_data->event_data[serve_by].routine(NULL);
     // socklen_t len = sizeof(detached_data->event_data.clientdata);
-    char msg[1024];
-    sprintf(msg, "\nyour_messange: %stimestamp: %lu\nserve_by_thread_num:%d\n", 
-        detached_data->event_data[serve_by].text, detached_data->event_data[serve_by].time, *detached_data->serve_by);
+    // char msg[1024];
+    // //sprintf(msg, "\nyour_messange: %stimestamp: %lu\nserve_by_thread_num:%d\n", 
+    // //    detached_data->event_data[serve_by].text, detached_data->event_data[serve_by].time, *detached_data->serve_by);
+    // sprintf(msg, "[server] apa? kok bilang \"%s\"", detached_data->event_data[serve_by].text);
 
-    int ret = sendto(
-        detached_data->event_data[serve_by].fd, 
-        msg, strlen(msg),
-        0, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, sizeof(detached_data->event_data[serve_by].client_addr));
+    // int ret = sendto(
+    //     detached_data->event_data[serve_by].fd, 
+    //     msg, strlen(msg),
+    //     0, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, sizeof(detached_data->event_data[serve_by].client_addr));
+    // memset(msg, 0, sizeof(msg));
+    //sprintf(msg, "\nyour_messange: %stimestamp: %lu\nserve_by_thread_num:%d\n", 
+    //    detached_data->event_data[serve_by].text, detached_data->event_data[serve_by].time, *detached_data->serve_by);
+    // sprintf(msg, "%s ", "[you] >");
 
+    // ret = sendto(
+    //     detached_data->event_data[serve_by].fd, 
+    //     msg, strlen(msg),
+    //     0, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, sizeof(detached_data->event_data[serve_by].client_addr));
+    
 
 //    sendto(detached_data->event_data, "apa wkwk\n", 9, MSG_WAITALL, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, len);
 
@@ -94,7 +109,7 @@ void* handle_routine(void *data_join)
     // carrier_now->event_stack[carrier_now->event_data->serve_by]->state = 0;
     //printf("served by num %d\n", detached_data->event_data.serve_by);
     //logp("pesan: %s\n", detached_data->event_data[serve_by].text);
-    sleep(5);
+    //sleep(5);
     
     //close(detached_data->event_data.fd);
     //detached_data->event_stack[serve_by].state = 0;
@@ -116,6 +131,7 @@ int random_thread_create(struct data_join *data_join,
     struct event_from_main_thread_data *event_data, int *free_thread_nums)
 {
 
+    
     event_stack[*free_thread_nums].state = 1;
     event_stack[*free_thread_nums].ready_to_use = 0;
     // dprint("befoore thread served by %d\n", free_thread_nums);
@@ -241,7 +257,7 @@ void *handle_incoming_conn(void *ptr)
                 socklen_t slen = sizeof(client_addr);
 
                 memset(&buf, 0, sizeof(buf));
-                memset(&event_data, 0, sizeof(event_data));
+                //memset(&event_data, 0, sizeof(event_data));
                 recvfrom(*main_thread_carrier->udpfd, &buf, sizeof(buf), 0, 
                     (struct sockaddr *)&client_addr, &slen);
 
@@ -252,10 +268,13 @@ void *handle_incoming_conn(void *ptr)
                     event_data[rand_thread_ret].fd = events[i].data.fd;
                     event_data[rand_thread_ret].time = (int)time(NULL);
                     strcpy(event_data[rand_thread_ret].text, buf);
+                    //strcpy(event_data[rand_thread_ret].text, buf);
                     event_data[rand_thread_ret].client_addr = client_addr;
                     event_data[rand_thread_ret].routine = main_thread_carrier->routine;
 
                     random_thread_create(&data_join, event_stack, event_data, &rand_thread_ret);
+
+                    //printf("data recv adlah %s\n", event_data[rand_thread_ret].text);
                 }
 
                 // event_data[].time = ;

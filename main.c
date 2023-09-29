@@ -50,6 +50,7 @@ int try_parse(int argc, char *argv[], struct server_parameter* server_parameter)
 
 void* callme(void *ptr)
 {
+    sleep(5);
     printf("hi im fadhil");
 }
 
