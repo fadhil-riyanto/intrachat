@@ -62,29 +62,29 @@ void* handle_routine(void *data_join)
 {
     struct data_join *detached_data = data_join;
     int serve_by = *detached_data->serve_by;
-    char text[MAXIMUM_BUFFER];
+    //char text[MAXIMUM_BUFFER];
     //strcpy(text, detached_data->event_data[serve_by].text);
     sleep(5);
     // dprint("recv data after subthread %p\n", &data_join);
     // printf("nums\n");
     // printf("nums %d\n", *(int*)data_join);
     
-    printf("incoming messange adalah %s\n", detached_data->event_data[serve_by].text);
+    //printf("incoming messange adalah %s\n", detached_data->event_data[serve_by].text);
     //int serve_by = detached_data->serve_by;
     // int server_by = detached_data->event_data.serve_by;
     
 
     //detached_data->event_data[serve_by].routine(NULL);
-    // socklen_t len = sizeof(detached_data->event_data.clientdata);
-    // char msg[1024];
+    socklen_t len = sizeof(detached_data->event_data[serve_by].client_addr);
+    char msg[1024];
     // //sprintf(msg, "\nyour_messange: %stimestamp: %lu\nserve_by_thread_num:%d\n", 
     // //    detached_data->event_data[serve_by].text, detached_data->event_data[serve_by].time, *detached_data->serve_by);
-    // sprintf(msg, "[server] apa? kok bilang \"%s\"", detached_data->event_data[serve_by].text);
+    sprintf(msg, "[server] apa? kok bilang \"%s\"", detached_data->event_data[serve_by].text);
 
-    // int ret = sendto(
-    //     detached_data->event_data[serve_by].fd, 
-    //     msg, strlen(msg),
-    //     0, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, sizeof(detached_data->event_data[serve_by].client_addr));
+    int ret = sendto(
+        detached_data->event_data[serve_by].fd, 
+        msg, strlen(msg),
+        0, (struct sockaddr*)&detached_data->event_data[serve_by].client_addr, sizeof(detached_data->event_data[serve_by].client_addr));
     // memset(msg, 0, sizeof(msg));
     //sprintf(msg, "\nyour_messange: %stimestamp: %lu\nserve_by_thread_num:%d\n", 
     //    detached_data->event_data[serve_by].text, detached_data->event_data[serve_by].time, *detached_data->serve_by);
@@ -177,6 +177,7 @@ void signal_handler(int signal_recv_number)
 void do_eventloop(struct main_thread_carrier *main_thread_carrier, pthread_t *handle_conn_thread)
 {
     //printf("[thread] after memaddr struct %p\n", handle_conn_thread);
+    printf("[thread] memaddr struct %p\n", handle_conn_thread);
     while(1){
         sleep(1);
         thread_joiner(main_thread_carrier->event_stack);
@@ -191,16 +192,13 @@ void do_eventloop(struct main_thread_carrier *main_thread_carrier, pthread_t *ha
                 // to do next: check 10 thread state, cancel 10 thread
                 if (main_thread_carrier->event_stack[i].state == 1) {
                     printf("killing running thread %d\n", i);
-                    pthread_cancel(main_thread_carrier->event_stack[i].thread);
+                    pthread_kill(main_thread_carrier->event_stack[i].thread, SIGINT);
                 }
 
                 if (main_thread_carrier->event_stack[i].ready_to_use == 0) {
                     printf("clening the unclean thread %d\n", i);
                     pthread_join(main_thread_carrier->event_stack[i].thread, NULL);
                 }
-                
-                
-                
             }
 
             pthread_cancel(*handle_conn_thread);
@@ -209,7 +207,7 @@ void do_eventloop(struct main_thread_carrier *main_thread_carrier, pthread_t *ha
             close(*main_thread_carrier->udpfd);
             close(*main_thread_carrier->epfd);
 
-            printf("exit succesfully\n");
+            printf("exit succesfully \n");
             break;
         }
     }
@@ -389,7 +387,7 @@ int create_udp_server(struct server_parameter* server_parameter, void *(*routine
     pthread_create(&handle_conn_thread, NULL, handle_incoming_conn, (void*)&main_thread_carrier);
 
     //printf("epfd memaddr %d\n", epfd);
-    //printf("[thread] memaddr struct %p\n", &handle_conn_thread);
+    printf("[thread] memaddr struct %p\n", &handle_conn_thread);
 
     do_eventloop(&main_thread_carrier, &handle_conn_thread);
     return 0;
