@@ -1,28 +1,31 @@
 #include <stdio.h>
+#include <sys/types.h>
 
-struct test1
+struct test1 // 101 size
 {
-    char *buf;
-    int  bufint;
+    char buf[100];  // 100
+    u_int8_t somedata; // 1
 };
+
 int main()
 {
     FILE *file;
     size_t size;
     char *buf;
 
-    FILE *fd = fopen("variadic.c", "rb");
+    FILE *fd = fopen("bin1.test", "rb");
 
     fseek(fd, 0, SEEK_END); 
     size = ftell(fd);
     fseek(fd, 0, SEEK_SET);
 
-    printf("sizeof() variadic.c is %zu\n", size);
+    
+
+    printf("sizeof() is %zu\n", size);
+    printf("arr val is %lu\n", (size / 2) / sizeof(struct test1));
 
     // fread(&buf, sizeof(buf), (sizeof(buf) / sizeof(buf[0])), fd);
 
     //struct test1 *test1 = (struct test1*)buf;
-
-    printf("data num 1 %s", buf);
     return 0;
 }
