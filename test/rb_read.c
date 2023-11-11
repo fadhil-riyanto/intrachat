@@ -1,21 +1,25 @@
 #include <stdio.h>
 
-struct test1
-{
-    char buf[100];
-    int  bufint;
+struct database_struct {
+    char *username;
+    char *password;
+    int state;
 };
+
 int main()
 {
     FILE *file;
     size_t size;
+    struct database_struct *dbctx;
+    
     unsigned char buf[1024];
-    struct test1 test[2];
 
-    FILE *fd = fopen("bin.test", "rb");
-    fread(&test, sizeof(struct test1), 2, fd);
+    FILE *fd = fopen("binwrite.test", "rb");
+    fread(buf, sizeof(struct database_struct), 3, fd);
 
-    printf("data %s\n", test[0].buf);
+    
+    dbctx = (struct database_struct*)buf;
+    printf("data %s\n", dbctx[0].username);
 
     return 0;
 }

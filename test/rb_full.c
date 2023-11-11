@@ -31,10 +31,10 @@ int db_read(FILE* filectx)
     return 0;
 }
 
-struct test // 101 size
-{
-    char buf[100];  // 100
-    u_int8_t somedata; // 1
+struct test {
+    char *username;
+    char *password;
+    int state;
 };
 
 int main()
@@ -44,7 +44,7 @@ int main()
     struct test *test;
 
     FILE *filectx;
-    filectx = fopen("bin1.test", "rb");
+    filectx = fopen("binwrite.test", "rb");
     printf("%p\n", filectx);
 
     printf("trying allocate %lu\n", db_fguess_size(filectx));
@@ -52,7 +52,7 @@ int main()
     int realsize = db_fguess_size(filectx) / 2;
     u_int8_t arrsize = db_fguess_arrsize(realsize, sizeof(struct test));
 
-    buf = malloc(realsize * arrsize);
+    buf = malloc(5 * sizeof(struct test));
     if (!buf) {
         return ENOMEM;
     }
@@ -62,7 +62,7 @@ int main()
     test = (struct test*)buf;
     int i = 0;
     for(;;) {
-        printf("index %d | %s, %hhu\n", i, (char*)test[i].buf, (u_int8_t)test[i].somedata);
+        printf("index %d | %s, %s\n", i, (char*)test[i].username, (char*)test[i].password);
         if (i < (arrsize - 1) ) { 
             i++;
         } else {

@@ -1,0 +1,16 @@
+user -> database_init()
+ -- doing create new file if not exist
+ -- if exist, open first byte, read
+    -- alloc memory depend of first byte
+    -- load all contents
+
+user -> database_add()
+ -- check the memory, realloc add 1
+ -- append to the memory
+
+(USER database_add() loop runtime)
+
+user -> save()
+ -- open particular file
+ -- write
+ -- release
