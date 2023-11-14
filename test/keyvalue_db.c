@@ -28,6 +28,7 @@ void database_init(struct database_prop *dbctx, size_t database_struct_size, cha
     dbctx->mem_cureent_size = file_arr_size + 1;
     dbctx->database_struct_size = database_struct_size;
     dbctx->database_struct = malloc(database_struct_size * dbctx->mem_cureent_size);
+    dbctx->filename = filename;
 
     // // read all
     buf = malloc(sizeof(struct database_struct) * dbctx->mem_cureent_size);
@@ -57,11 +58,13 @@ void database_cleanup(struct database_prop *dbctx)
 
 void database_write(struct database_prop *dbctx)
 {
-    FILE *
+    FILE *filectx = fopen(dbctx->filename, "wb+");
+
     int arrsize = dbctx->mem_cureent_size - 1;
-    db_putsize(filectx, &dbctx->mem_cureent_size);
+    fwrite(&arrsize, sizeof(int), 1, filectx);
     printf("%d\n", dbctx->mem_cureent_size);
-    return fwrite(dbctx->database_struct, sizeof(struct database_struct), dbctx->mem_cureent_size, *filectx);
+    fwrite(dbctx->database_struct, sizeof(struct database_struct), dbctx->mem_cureent_size, filectx);
+    fclose(filectx);
 }
 
 void debug_database_show(struct database_prop *dbctx, int index)
@@ -109,16 +112,17 @@ int file_loads(FILE **filectx, struct database_prop *dbctx)
     return 0;
 }
 
-void db_putsize(FILE **filectx, int *sizeofarr)
+void db_putsize(FILE *filectx, int sizeofarr)
 {
     int ret;
     size_t sizeofint_sample = sizeof(int);
-    int diff_int = (*sizeofarr - 1);
+    //printf("size iss %d\n", sizeofarr);
+    int localint = 8;
 
     // sizeof arr -1 because there the initial value is 1, so instead using 0 that cant to be multiplied and the result is 0 memsize
-    fwrite(&diff_int, sizeof(int), 1, *filectx);
+    fwrite(&localint, sizeof(int), 1, filectx);
     
-    printf("%lu current stream position\n", ftell(*filectx));
+    printf("%lu current stream position\n", ftell(filectx));
 
     // set the seek to the upwards pointed by current offset (which is zero) 
     // and add it by size of 1 int multiplied by 2

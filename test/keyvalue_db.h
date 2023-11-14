@@ -21,12 +21,13 @@ struct database_prop {
 };
 
 // private func
-void db_putsize(FILE **filectx, int *sizeofarr);
+void db_putsize(FILE *filectx, int sizeofarr);
 
 void database_init(struct database_prop *dbctx, size_t database_struct_size, char *filename);
 void database_add(struct database_prop *dbctx, char *username, char* password, int state);
-void database_save_tofile(struct database_prop *dbctx);
 void database_cleanup(struct database_prop *dbctx);
+void database_write(struct database_prop *dbctx);
+
 
 void debug_database_show(struct database_prop *dbctx, int index);
 void database_clean(struct database_prop);
