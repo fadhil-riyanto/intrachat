@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "server.h"
+#include "chat/chat_session_handler.h"
 
 #define getopt_required_arg 1
 #define getopt_optional_arg 2
@@ -72,7 +73,7 @@ void try_parse(int argc, char *argv[], struct server_parameter* server_parameter
 void* callme(void *ptr)
 {
     sleep(5);
-    printf("hi im fadhil");
+    printf("hi im fadhil wkwkwkwk\n");
 }
 
 int main(int argc, char *argv[])
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
     try_parse(argc, argv, &server_parameter);
 
     printf("starting at %s:%s", server_parameter.addr, server_parameter.port);
-    create_udp_server(&server_parameter, callme);
+    create_udp_server(&server_parameter, recv_callback_from_server);
 
     
     return  0;
