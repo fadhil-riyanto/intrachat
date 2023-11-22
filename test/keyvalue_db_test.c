@@ -6,7 +6,6 @@
 int main()
 {
     int ret;
-    FILE *filectx;
     struct database_prop dbctx;
     struct database_struct dbstruct;
 
@@ -14,10 +13,10 @@ int main()
         "binwrite.test");
 
 
-    database_add(&dbctx, "test0", "123", 0);
-    database_add(&dbctx, "test1", "222", 1);
-    database_add(&dbctx, "test2","323", 1);
+    // database_add(&dbctx, "test0", "123", 0);
+    // database_add(&dbctx, "test1", "222", 1);
+    // database_add(&dbctx, "test2","323", 1);
 
-    database_write(&dbctx);
-    database_cleanup(&dbctx);
+    // database_write(&dbctx);
+    // database_cleanup(&dbctx);
 }

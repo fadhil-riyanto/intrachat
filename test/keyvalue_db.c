@@ -25,6 +25,8 @@ void database_init(struct database_prop *dbctx, size_t database_struct_size, cha
     // read first byte
     fread(&file_arr_size, sizeof(int), 1, openfd);
 
+    printf("%d arr is", file_arr_size);
+
     dbctx->mem_cureent_size = file_arr_size + 1;
     dbctx->database_struct_size = database_struct_size;
     dbctx->database_struct = malloc(database_struct_size * dbctx->mem_cureent_size);
